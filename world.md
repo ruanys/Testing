@@ -1,5 +1,41 @@
 # Hello world. I want to change job!
 
+eth_trace_file = open("./trace")
+price_file = open("./price_log")
+btc_trace_file = open("./bitcoin_window_volumes.txt")
+btc_trace = []
+eth_trace = []
+price = []
+import pandas as pd
+import math
+import numpy as np
+import numpy
+%matplotlib inline
+import matplotlib as mpl
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+
+for line in btc_trace_file.read().splitlines():
+    if len(line.split("\t")) <2:
+        continue
+    btc_trace.append({"timestamp":line.split("\t")[0],
+                  "value":float(line.split("\t")[1])})
+
+for line in eth_trace_file.read().splitlines():
+    #print line
+    eth_trace.append({"timestamp":line.split("\t")[0],
+                  "value":float(line.split("\t")[1])})
+
+for line in price_file.read().splitlines():
+    a = line.split("\t")
+    price.append({"open": float(a[1]),
+                  "high": float(a[2]),
+                  "low": float(a[3]),
+                  "close": float(a[4]),
+                  "timestamp":a[0]})
+                  
+                  
+
 Trade Flow Analysis: Analyzed the trade data information for US IG & HY corporate bonds desks and helped them better manage clients request and inventory.
 So this is like a data analysis or data mining project. As one of the biggest broker-dealer in fixed income market, Citi does a lot of trades with our clients, like mutual funds, hedge funds, pension funds, etc. So we want to know if we can get any information from the trades we are doing with our clients. We want to answer questions like, if our clients are more informed player in the market, ie if they are buying the cheap bonds and selling the rich bonds, and if they have more expertise in one specific sector or specific time period. Or, from the bond's perspective, which bonds are more popular in the market and if the buy/sell activities at Citi would impact their prices in the coming days. 
 
