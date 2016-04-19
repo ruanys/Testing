@@ -1,61 +1,108 @@
-What do you think of the ECB policy?
+def spearman_corr(full_data_set, bench_mark_symbol, window_size, validated_symbols):
+    
+    r_s = rolling_window(full_data_set[validated_symbols].values.T, window_size)
+    r_m = rolling_window(full_data_set[bench_mark_symbol].values.T, window_size)
+    corr_xy = np.zeros(r_s.shape[:2])
+    
+    for i in range(r_s.shape[0]):
+        for j in range(r_s.shape[1]):
+            corr_xy[i,j] = spearman_rank_corr(r_m[0,j,:], r_s[i,j,:], r_s.shape[2])
+            
+    market_std = np.std(r_m, axis=-1, ddof=0)
+    ticker_std = np.std(r_s, axis=-1, ddof=0)
+    
+    res = pd.DataFrame(data=(corr_xy*ticker_std/market_std).T, index=full_data_set.index[window_size-1:], columns=full_data_set[validated_symbols].columns)
+    res = res.shift(1)
 
-It’s true that ECB never fails to surprise the market. It went all-in last week. Now its main rate is zero and deposit rate is -0.4% and expanded its QE program to 80billion euro per month.
-What’s new here is that it added corporate bonds to its shopping list and offer ultra-cheap lending for banks till 2021. They really want to boost growth and inflation. 
-I think this is an important move and will support the recovery to some extent. But I think the market may focus more on the reality of the underlying economic fundamentals. (concerns: may encourage more issuance in euro by US corporates,  exacerbate liquidity problems in corporate bonds, depends on the appetite of banks to lend)
+    return res
+    
+    
+    
+    def spearman_rank_corr(X, Y, n):
 
+    Xrank = stats.rankdata(X, method='average')
+    Yrank = stats.rankdata(Y, method='average')
 
+    diffs = Xrank - Yrank 
+    print diffs
+    corr = 1 - 6*sum(diffs*diffs)/(n*(n**2 - 1))
+    return corr
+    
+    
+    def blume_beta(beta_matrix, shift):
+    
+    beta_rolling = rolling_window(beta_matrix.T.values, 2)
+    if shift==0:
+        beta_day0 = beta_rolling[:,:,0]
+    else:
+        beta_day0 = beta_rolling[:,:,0][:,:-shift]
+            
+    beta_day1 = beta_rolling[:,:,1][:,shift:]
 
+    beta = (np.mean(beta_day0*beta_day1, 0) - np.mean(beta_day0, 0)*np.mean(beta_day1, 0))/np.var(beta_day0, 0)*float(window_size)/(window_size)
+    alpha = np.mean(beta_day1, 0) - np.mean(beta_day0, 0)*beta
+    
+    estimated = alpha + beta_day1*beta   
+    res = pd.DataFrame(data=estimated.T, index=beta_matrix.index[shift+1:], columns=beta_matrix.columns)
+    res = res.shift(shift)
+    
+    return res
+    
+    
+    
+    
+    def vasicek_beta(beta_matrix, full_data_set, benchmark, validated_symbols, window_size, start_time):
+    
+    r_s = rolling_window(full_data_set[validated_symbols].values.T, window_size)
+    r_m = rolling_window(full_data_set[bench_mark_symbol].values.T, window_size)
 
-Zero interest rate:
+    std_err = np.zeros(r_s.shape[:2])
+    for i in range(r_s.shape[0]):
+        for j in range(r_s.shape[1]):
+            m, b, r_value, p_value, std_err[i, j] = stats.linregress(r_m[j,:], r_s[i,j,:])
+    
+    var_err = std_err*std_err      
+    var_err_df = pd.DataFrame(data=var_err.T, index=full_data_set.index[window_size-1:], columns=full_data_set[validated_symbols].columns)
+    var_err_df = var_err_df.shift(1)   
+        
+    var_err_df = var_err_df.loc[start_time:]
+    
+    return res
+    
+    
+    
+    
+    
+    result2.multiply((result2.add(result2.var(axis=1), axis="index")).apply(lambda x: result2.var(axis=1).div(x)))
+    
+    
+    
+    def xxx_corr(full_data_set, bench_mark_symbol, window_size, validated_symbols):
+    
+    y = rolling_window(full_data_set[validated_symbols].values.T, window_size)
+    x = rolling_window(full_data_set[bench_mark_symbol].values.T, window_size)
+    
+    xy = rolling_window(full_data_set[validated_symbols].values.T * (full_data_set[bench_mark_symbol]).values.T, window_size)
+    corr_xy = ((np.mean(xy, -1) - np.mean(x, -1)*np.mean(y, -1))*float(window_size)/(window_size)/np.std(x, axis=-1, ddof=0)/np.std(y, axis=-1, ddof=0))
+    
+    print (np.mean(xy, -1) - np.mean(x, -1)*np.mean(y, -1))
+    print np.std(x, axis=-1, ddof=0)
+    print np.std(y, axis=-1, ddof=0)
+    print corr_xy
+    
 
+    market_std = np.std(x, axis=-1, ddof=0)
+    ticker_std = np.std(y, axis=-1, ddof=0)
+    
+    
+    res = pd.DataFrame(data=(corr_xy*ticker_std/market_std).T, index=full_data_set.index[window_size-1:], columns=full_data_set[validated_symbols].columns)
+    res = res.shift(1)
 
-
-What do you think FOMC would do next?
-
-
-
-
-
-Bank Selloff
-It’s the probability crisis that drove the sell-off of the banks: low interest rates make it harder for banks to make profits by the spread. And in Europe, the negative deposit rates means banks have to pay money to the central bank while they don’t want to do the same for their depositors. 
-And the economic recovery problems and slumping oil prices worsened the concerns that banks may have difficulties dealing with their bad loans. 
-
-So I think it’s quite understandable that a selloff in banks actually happened during the global market turmoil. They are the most leveraged companies, and they face most difficulties in economic downturns. And I think people still have some fresh memory of 2008. 
-
-But I think banks are actually much stronger now, in terms of capital and liquidity. Also, the US banks’s revenue is actually really good. I think the selloff is overdone. 
-
-
-
-What do you think of the global economy?
-
-
-
-
-
-
-
-What do you think of the Chinese economy?
-
-Yes, I agree the whole picture of China growth is quite gloomy. But I think it’s really an expectation based on past performance vs new normal of the reality. We can’t expect an economy to grow at 10% forever. And yes, China has its own problem, like the structural issues(from investment driven to consumption driven), debt issues and the overheat in property market. 
-
-But I still think China can tackle its own problem because the government is really willing to use everything it can, including monetary policy and fiscal policy to encourage economic development. the reserve rate and interest rate in China is still high compared to the developed economies, which leaves a big room for policy changes. 
-And also, China is a huge market and its growth, although slowed down already, remains strong compared to most of the rest of the world. It still has lots of potential in things like urbanization, consumer spending, high technology and people in China are already working on those things. Therefore, I  
-
-exchange rate
-The still-large trade surplus serves as an important support of the RMB exchange rate, and we see that people’s bank of china has made great efforts to stabilize the exchange rate in recent four month. Also, the depreciation of renminbi is not good for china, either. As long as people have the expectation of consistent depreciation, money will flow out of China really quickly, which would offset the potential benefit for the manufacturing industry of a cheaper currency. So I think we don’t need to worry too much about the exchange rate. 
-
-What do you think of oil?
-
-
-
-
-
-
-Pitch me a stock/investment idea
-I think India now is like China twenty, or thirty years ago. Very likely, it will become the global growth engine in the near future. 
-It’s already the fastest growing economy in the world. It grew 7.6% in 2015, surpassing China. And I still see further future growth in its economy:
-supportive policy environment: its primer minister Mr. Modi, is encouraging investment in the country and make everything it can to facilitate investment and construction, including cut taxes and infrastructure. Actually the government itself is spending heavily on construction and infrastructure. We already see some infrastructure improvement, and strong growth in its manufacturing, finance, insurance and real estate sector. With the inexpensive labor, it can pick up the manufacturing left by China. 
-Another thing that many people fail to see but I think might be more important in India’s growth is population. A young and educated population. It’s estimated to become the most populous country as well as the youngest country in the world by 2020. This is really a huge advantage in economy growth amid the aging population in developed countries and China.
-
-
+    return res
+    
+    
+    #on how to get result2 for vasicek_beta
+    dates = pd.date_range('20130101',periods=10)
+    df = pd.DataFrame(np.random.randn(10,4),index=dates,columns=list('ABCD'))
+    result2 = xxx_corr(df, ['A'], 3, ['B', 'C', 'D'])
+    
