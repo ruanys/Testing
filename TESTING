@@ -1,3 +1,80 @@
+def lowess_beta(full_data_set, bench_mark_symbol, validated_symbols, window_size, f=2. / 3., iter=3):
+    
+    r_s = rolling_window(full_data_set[validated_symbols].values.T, window_size)
+    r_m = rolling_window(full_data_set[bench_mark_symbol].values.T, window_size)
+    alpha = np.zeros(r_s.shape[:2])
+    beta = np.zeros(r_s.shape[:2])
+    
+    index=np.arange(float(window_size))   
+    r = int(ceil(f * window_size))
+    h = [np.sort(np.abs(index - index[i]))[r] for i in range(window_size)]
+    w_x = np.clip(np.abs((index[:, None] - index[None, :]) / h), 0.0, 1.0)
+    initial_weight = (1 - w_x ** 3) ** 3
+    xxx = pd.DataFrame(initial_weight)
+    
+    yest = np.zeros(window_size)
+    delta = np.ones(window_size)
+    
+    for i in range(r_s.shape[0]):
+        for j in range(r_s.shape[1]):
+            w=initial_weight
+            yest = np.zeros(window_size)
+            delta = np.ones(window_size)
+            for iteration in range(iter):
+                for k in range(window_size):
+                    weights = delta * w[:, k]
+                    b = np.array([np.sum(weights * r_s[i,j,:]), np.sum(weights * r_s[i,j,:] * r_m[j,:])])
+                    A = np.array([[np.sum(weights), np.sum(weights * r_m[j,:])],
+                                  [np.sum(weights * r_m[j,:]), np.sum(weights * r_m[j,:] * r_m[j,:])]])
+                    estimation = linalg.solve(A, b)
+                    if k==window_size-1:
+                        print weights
+                        print estimation
+                    yest[k] = estimation[0] + estimation[1] * r_m[j,:][k]
+                    if k==window_size-1 and iteration==iter-1:
+                        alpha[i,j]=estimation[0]
+                        beta[i,j]=estimation[1]
+
+                print yest
+                residuals = r_s[i,j,:] - yest
+                s = np.median(np.abs(residuals))
+                
+                delta = np.clip(residuals / (6.0 * s), -1, 1)
+                delta = (1 - delta ** 2) ** 2  
+    return alpha, beta, yest
+    
+    def lowess_beta_fast(full_data_set, bench_mark_symbol, validated_symbols, window_size, f=2. / 3.):
+    
+    r_s = rolling_window(full_data_set[validated_symbols].values.T, window_size)
+    r_m = rolling_window(full_data_set[bench_mark_symbol].values.T, window_size)
+    alpha = np.zeros(r_s.shape[:2])
+    beta = np.zeros(r_s.shape[:2])
+    
+    index=np.arange(float(window_size))   
+    r = int(ceil(f * window_size))
+    h = [np.sort(np.abs(index - index[i]))[r] for i in range(window_size)]
+    w_x = np.clip(np.abs((index[:, None] - index[None, :]) / h), 0.0, 1.0)
+    weights = ((1 - w_x ** 3) ** 3)[:, -1]
+    
+    for i in range(r_s.shape[0]):
+        for j in range(r_s.shape[1]):
+            print weights
+            b = np.array([np.sum(weights * r_s[i,j,:]), np.sum(weights * r_s[i,j,:] * r_m[j,:])])
+            A = np.array([[np.sum(weights), np.sum(weights * r_m[j,:])],
+                          [np.sum(weights * r_m[j,:]), np.sum(weights * r_m[j,:] * r_m[j,:])]])
+            alpha[i,j], beta[i,j] = linalg.solve(A, b)
+    return alpha, beta
+    
+    
+
+
+
+
+
+
+
+
+
 def spearman_corr(full_data_set, bench_mark_symbol, window_size, validated_symbols):
     
     r_s = rolling_window(full_data_set[validated_symbols].values.T, window_size)
